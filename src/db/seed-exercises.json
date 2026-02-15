@@ -1,0 +1,90 @@
+[
+  {
+    "name": "Barbell curl",
+    "recommendedMaxReps": 8
+  },
+  {
+    "name": "Barbell Hip Thrust",
+    "recommendedMaxReps": 8
+  },
+  {
+    "name": "Barbell Squat",
+    "recommendedMaxReps": 8
+  },
+  {
+    "name": "Cable Lateral Raise",
+    "recommendedMaxReps": 15
+  },
+  {
+    "name": "Close Grip Machine Row",
+    "recommendedMaxReps": 8
+  },
+  {
+    "name": "Close Grip Pull Up",
+    "recommendedMaxReps": 8
+  },
+  {
+    "name": "Leg Extension",
+    "recommendedMaxReps": 8
+  },
+  {
+    "name": "Leg Press",
+    "recommendedMaxReps": 8
+  },
+  {
+    "name": "Leg Press Calf Raise",
+    "recommendedMaxReps": 8
+  },
+  {
+    "name": "Machine Chest Press",
+    "recommendedMaxReps": 8
+  },
+  {
+    "name": "Overhand Pulldown",
+    "recommendedMaxReps": 8
+  },
+  {
+    "name": "Overhead Machine Press",
+    "recommendedMaxReps": 8
+  },
+  {
+    "name": "Pec Deck",
+    "recommendedMaxReps": 8
+  },
+  {
+    "name": "Romanian Deadlift",
+    "recommendedMaxReps": 8
+  },
+  {
+    "name": "Rope Pushdown",
+    "recommendedMaxReps": 8
+  },
+  {
+    "name": "Seated Leg Curl",
+    "recommendedMaxReps": 8
+  },
+  {
+    "name": "Single Arm Dumbbell Row",
+    "recommendedMaxReps": 8
+  },
+  {
+    "name": "Wide Grip Seated Row",
+    "recommendedMaxReps": 8
+  },
+  {
+    "name": "Roman Chair",
+    "recommendedMaxReps": 8
+  },
+  {
+    "name": "Dumbbell Lateral Raise",
+    "recommendedMaxReps": 15
+  },
+  {
+    "name": "Incline Barbell Press",
+    "recommendedMaxReps": 8
+  },
+  {
+    "name": "Concentration Curl",
+    "recommendedMaxReps": 12
+  }
+]
