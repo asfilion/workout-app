@@ -43,9 +43,64 @@ npx expo start
 
 Scan the QR code with Expo Go on your iPhone. The app loads over your local network -- no internet required after the initial bundle.
 
-## Building a Standalone App
+**Limitation:** With this approach, your laptop must be running `npx expo start` whenever you open the app in Expo Go. To use the app without your laptop, see the next section.
 
-You need a standalone `.ipa` file to install the app permanently on your iPhone (without Expo Go). Expo's **EAS Build** service handles this from any OS.
+## Using with Expo Go (No Laptop Required)
+
+You can publish the app to Expo's update service so Expo Go loads it from the cloud instead of your laptop. This is **completely free** -- no Apple Developer account needed.
+
+### One-Time Setup
+
+```bash
+# Install EAS CLI
+npm install -g eas-cli
+
+# Log in to your free Expo account
+eas login
+
+# Initialize EAS Update for the project
+eas update:configure
+```
+
+### Publish an Update
+
+```bash
+eas update --branch main --message "Initial release"
+```
+
+This uploads your JS bundle to Expo's CDN.
+
+### Open on Your iPhone
+
+1. Open Expo Go on your iPhone
+2. Log in with the same Expo account
+3. The project appears under "Projects" on the home screen
+4. Tap to launch -- it downloads the bundle once, then runs locally
+
+### How It Works
+
+| | Laptop needed? | Internet needed? | Data persists? |
+|---|---|---|---|
+| `npx expo start` (dev) | Yes, every launch | No (local WiFi) | Yes |
+| `eas update` (published) | No | Only on first load | Yes |
+
+- Your workout data (exercises, sessions, sets) is stored in SQLite **on your iPhone** and persists across app restarts
+- After the first load, the app works fully offline -- you can use it in airplane mode at the gym
+- To push code changes, just run `eas update` again from your laptop
+
+### Updating the App
+
+After making code changes:
+
+```bash
+eas update --branch main --message "description of changes"
+```
+
+Next time you open the app in Expo Go, it picks up the new version automatically.
+
+## Building a Standalone App (Optional)
+
+If you want the app to run without Expo Go (its own icon on your home screen, no Expo dependency), you need a standalone `.ipa`. This requires an Apple Developer account ($99/year) for code signing. Expo's **EAS Build** service handles the build from any OS.
 
 ### Prerequisites (all platforms)
 
