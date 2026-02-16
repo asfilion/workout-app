@@ -202,4 +202,4 @@ See [DECISIONS.md](DECISIONS.md) for architectural rationale.
 
 ## License
 
-Private project. All rights reserved.
+[MIT](LICENSE)
