@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-expo-app:*)",
+      "Bash(npx create-expo-app@latest WorkoutAppScaffold --template blank-typescript)",
+      "Bash(npx expo install:*)",
+      "Bash(npm install)",
+      "Bash(git -C /c/ClaudeProjects/WorkoutApp status)",
+      "Bash(git -C /c/ClaudeProjects/WorkoutApp log --oneline -5)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node:*)",
+      "Bash(npm install:*)"
+    ]
+  }
+}

@@ -125,7 +125,7 @@ export default function ActiveSessionScreen({ navigation }: Props) {
   function handleCancelWorkout() {
     Alert.alert(
       'Cancel Workout',
-      'Are you sure you want to cancel? All logged sets will be discarded.',
+      'Are you sure you want to cancel this workout?',
       [
         { text: 'Keep Going', style: 'cancel' },
         {
