@@ -45,6 +45,13 @@ export default function ActiveSessionScreen({ navigation }: Props) {
 
   async function loadExercises() {
     if (!activeSession) return;
+    // Still resolved through the template here; step 4 of the plan switches this
+    // over to the session's own exercise list. Sessions without a template or a
+    // weekday cannot be reached from the UI yet.
+    if (!activeSession.workoutTemplateId || !activeSession.dayOfWeek) {
+      setExerciseRows([]);
+      return;
+    }
     const days = await getDaysForTemplate(activeSession.workoutTemplateId);
     const day = days.find((d) => d.dayOfWeek === activeSession.dayOfWeek);
     if (!day || day.orderedExerciseIds.length === 0) {

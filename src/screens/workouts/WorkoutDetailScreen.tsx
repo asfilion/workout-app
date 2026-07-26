@@ -38,7 +38,9 @@ export default function WorkoutDetailScreen({ route, navigation }: Props) {
         if (template) setTemplateName(template.name);
         const map: Record<string, WorkoutDayTemplate> = {};
         for (const d of days) {
-          map[d.dayOfWeek] = d;
+          // A standalone workout's day-independent list has no weekday and so
+          // has no slot in this grid.
+          if (d.dayOfWeek) map[d.dayOfWeek] = d;
         }
         setDayMap(map);
       }

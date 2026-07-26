@@ -7,9 +7,10 @@ import { getHistoryForExercise } from '../../db/sessions';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { formatWeight } from '../../utils/units';
 import { formatDateTime } from '../../utils/time';
-import { SessionSetEntry } from '../../types';
+import { SessionSetEntry, DayOfWeek } from '../../types';
 
-type HistoryEntry = SessionSetEntry & { workoutName: string; dayOfWeek: string };
+// dayOfWeek is null for ad hoc and standalone workouts, which belong to no weekday.
+type HistoryEntry = SessionSetEntry & { workoutName: string; dayOfWeek: DayOfWeek | null };
 
 type Props = NativeStackScreenProps<ExercisesStackParamList, 'ExerciseDetail'>;
 
