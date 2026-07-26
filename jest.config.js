@@ -7,7 +7,14 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  testMatch: ['**/src/db/__tests__/**/*.test.ts'],
+  testMatch: ['**/src/**/__tests__/**/*.test.ts'],
+  // expo's native modules throw at require time off-device, and jest's automock
+  // has to load a module to read its shape. Stub them at resolution.
+  moduleNameMapper: {
+    '^expo-sqlite$': '<rootDir>/src/db/__tests__/helpers/expoNativeStub.ts',
+    '^expo-sqlite/kv-store$': '<rootDir>/src/db/__tests__/helpers/expoNativeStub.ts',
+    '^expo-crypto$': '<rootDir>/src/db/__tests__/helpers/expoNativeStub.ts',
+  },
   transform: {
     '^.+\\.tsx?$': ['ts-jest', { tsconfig: { module: 'commonjs', esModuleInterop: true } }],
   },
