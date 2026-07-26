@@ -17,6 +17,7 @@ import { WorkoutsStackParamList } from '../../navigation/WorkoutsStack';
 import { useSessionStore } from '../../stores/sessionStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { getExerciseById } from '../../db/exercises';
+import { createWorkoutTemplate, upsertWorkoutDay } from '../../db/workouts';
 import { getLastSetForExercise as dbGetLastSet } from '../../db/sessions';
 import { convertWeight, convertToLb, formatWeight } from '../../utils/units';
 import { Exercise, SessionExercise, SessionSetEntry } from '../../types';
@@ -58,6 +59,10 @@ export default function ActiveSessionScreen({ navigation }: Props) {
   const [repsInput, setRepsInput] = useState('');
 
   const [pickerVisible, setPickerVisible] = useState(false);
+
+  // Offered when an ad hoc workout ends: keep what you just did as a workout.
+  const [saveModalVisible, setSaveModalVisible] = useState(false);
+  const [saveName, setSaveName] = useState('');
 
   useFocusEffect(
     useCallback(() => {
@@ -176,17 +181,43 @@ export default function ActiveSessionScreen({ navigation }: Props) {
     );
   }
 
+  async function finishWorkout(saveAsName?: string) {
+    if (saveAsName) {
+      const template = await createWorkoutTemplate(saveAsName, 'standalone');
+      await upsertWorkoutDay(
+        template.id,
+        null,
+        sessionExercises.map((e) => e.exerciseId)
+      );
+    }
+    await endSession('completed');
+    navigation.goBack();
+  }
+
   function handleEndWorkout() {
+    // A workout built on the fly is worth keeping if it went well, and there is
+    // nothing to save it from once the session is closed.
+    const isUnsavedAdHoc =
+      activeSession && !activeSession.workoutTemplateId && sessionExercises.length > 0;
+    if (isUnsavedAdHoc) {
+      setSaveName('');
+      setSaveModalVisible(true);
+      return;
+    }
     Alert.alert('End Workout', 'Mark this workout as completed?', [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'End Workout',
-        onPress: async () => {
-          await endSession('completed');
-          navigation.goBack();
-        },
-      },
+      { text: 'End Workout', onPress: () => finishWorkout() },
     ]);
+  }
+
+  async function handleSaveAndEnd() {
+    const name = saveName.trim();
+    if (!name) {
+      Alert.alert('Error', 'Please enter a name for this workout.');
+      return;
+    }
+    setSaveModalVisible(false);
+    await finishWorkout(name);
   }
 
   function handleCancelWorkout() {
@@ -335,6 +366,46 @@ export default function ActiveSessionScreen({ navigation }: Props) {
                 <Text style={styles.modalCancelBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.modalBtn, styles.modalSaveBtn]} onPress={handleSaveSet}>
+                <Text style={styles.modalSaveBtnText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal visible={saveModalVisible} transparent animationType="fade">
+        <KeyboardAvoidingView
+          style={styles.centeredOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={styles.centeredCard}>
+            <Text style={styles.modalTitle}>Save this workout?</Text>
+            <Text style={styles.saveBlurb}>
+              Keep these {sessionExercises.length} exercise
+              {sessionExercises.length === 1 ? '' : 's'} as a workout you can start any day.
+            </Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Workout name"
+              placeholderTextColor="#999"
+              value={saveName}
+              onChangeText={setSaveName}
+              autoFocus
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalCancelBtn]}
+                onPress={async () => {
+                  setSaveModalVisible(false);
+                  await finishWorkout();
+                }}
+              >
+                <Text style={styles.modalCancelBtnText}>Don't Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalSaveBtn]}
+                onPress={handleSaveAndEnd}
+              >
                 <Text style={styles.modalSaveBtnText}>Save</Text>
               </TouchableOpacity>
             </View>
@@ -516,6 +587,24 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     padding: 24,
     paddingBottom: 40,
+  },
+  centeredOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  centeredCard: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 20,
+  },
+  saveBlurb: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+    marginBottom: 16,
+    marginTop: -8,
   },
   modalTitle: {
     fontSize: 18,
