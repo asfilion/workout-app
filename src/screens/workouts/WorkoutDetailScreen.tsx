@@ -1,5 +1,16 @@
 import React, { useState, useCallback, useLayoutEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  Alert,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+} from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { WorkoutsStackParamList } from '../../navigation/WorkoutsStack';
@@ -8,6 +19,8 @@ import {
   getDaysForTemplate,
   getStandaloneDay,
   upsertWorkoutDay,
+  updateWorkoutTemplateName,
+  deleteWorkoutTemplate,
 } from '../../db/workouts';
 import { getExerciseById } from '../../db/exercises';
 import { useSessionStore } from '../../stores/sessionStore';
@@ -33,11 +46,65 @@ export default function WorkoutDetailScreen({ route, navigation }: Props) {
   const [scheduleType, setScheduleType] = useState<ScheduleType>('weekly');
   const [dayMap, setDayMap] = useState<Record<string, WorkoutDayTemplate>>({});
   const [standaloneExercises, setStandaloneExercises] = useState<Exercise[]>([]);
+  const [renameVisible, setRenameVisible] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
 
   const { activeSession, startSession } = useSessionStore();
 
+  function openMenu() {
+    Alert.alert(templateName, undefined, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Rename',
+        onPress: () => {
+          setRenameValue(templateName);
+          setRenameVisible(true);
+        },
+      },
+      { text: 'Delete Workout', style: 'destructive', onPress: confirmDelete },
+    ]);
+  }
+
+  function confirmDelete() {
+    Alert.alert(
+      'Delete Workout',
+      // Sessions are detached rather than removed, so say so plainly — the
+      // alternative reading is that deleting a workout erases its history.
+      `Delete "${templateName}"? Workouts you have already logged are kept in your history.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            await deleteWorkoutTemplate(templateId);
+            navigation.goBack();
+          },
+        },
+      ]
+    );
+  }
+
+  async function handleRename() {
+    const name = renameValue.trim();
+    if (!name) {
+      Alert.alert('Error', 'Please enter a workout name.');
+      return;
+    }
+    await updateWorkoutTemplateName(templateId, name);
+    setRenameVisible(false);
+    setTemplateName(name);
+  }
+
   useLayoutEffect(() => {
-    navigation.setOptions({ title: templateName });
+    navigation.setOptions({
+      title: templateName,
+      headerRight: () => (
+        <TouchableOpacity onPress={openMenu}>
+          <Text style={styles.headerButton}>Edit</Text>
+        </TouchableOpacity>
+      ),
+    });
   }, [navigation, templateName]);
 
   const load = useCallback(async () => {
@@ -120,6 +187,39 @@ export default function WorkoutDetailScreen({ route, navigation }: Props) {
     );
   }
 
+  // Included in both layouts below.
+  const renameModal = (
+    <Modal visible={renameVisible} transparent animationType="fade">
+      <KeyboardAvoidingView
+        style={styles.modalOverlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={styles.modalCard}>
+          <Text style={styles.modalTitle}>Rename Workout</Text>
+          <TextInput
+            style={styles.textInput}
+            placeholder="Workout name"
+            placeholderTextColor="#999"
+            value={renameValue}
+            onChangeText={setRenameValue}
+            autoFocus
+          />
+          <View style={styles.modalButtons}>
+            <TouchableOpacity
+              style={[styles.modalBtn, styles.cancelBtn]}
+              onPress={() => setRenameVisible(false)}
+            >
+              <Text style={styles.cancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.modalBtn, styles.saveBtn]} onPress={handleRename}>
+              <Text style={styles.saveBtnText}>Save</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+
   if (scheduleType === 'standalone') {
     return (
       <View style={styles.container}>
@@ -134,6 +234,7 @@ export default function WorkoutDetailScreen({ route, navigation }: Props) {
             </TouchableOpacity>
           }
         />
+        {renameModal}
       </View>
     );
   }
@@ -146,6 +247,7 @@ export default function WorkoutDetailScreen({ route, navigation }: Props) {
         renderItem={renderDay}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
       />
+      {renameModal}
     </View>
   );
 }
@@ -200,6 +302,66 @@ const styles = StyleSheet.create({
   startBtnText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  headerButton: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '600',
+    marginRight: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 16,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: '#333',
+    backgroundColor: '#fafafa',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 20,
+    gap: 12,
+  },
+  modalBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  cancelBtn: {
+    backgroundColor: '#f0f0f0',
+  },
+  cancelBtnText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '600',
+  },
+  saveBtn: {
+    backgroundColor: '#007AFF',
+  },
+  saveBtnText: {
+    fontSize: 16,
+    color: '#fff',
     fontWeight: '600',
   },
 });
