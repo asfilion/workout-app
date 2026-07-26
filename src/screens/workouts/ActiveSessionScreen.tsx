@@ -16,11 +16,12 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { WorkoutsStackParamList } from '../../navigation/WorkoutsStack';
 import { useSessionStore } from '../../stores/sessionStore';
 import { useSettingsStore } from '../../stores/settingsStore';
-import { getAllExercises, searchExercises, getExerciseById } from '../../db/exercises';
+import { getExerciseById } from '../../db/exercises';
 import { getLastSetForExercise as dbGetLastSet } from '../../db/sessions';
 import { convertWeight, convertToLb, formatWeight } from '../../utils/units';
 import { Exercise, SessionExercise, SessionSetEntry } from '../../types';
 import TimerDisplay from '../../components/TimerDisplay';
+import ExercisePicker from '../../components/ExercisePicker';
 
 type Props = NativeStackScreenProps<WorkoutsStackParamList, 'ActiveSession'>;
 
@@ -56,10 +57,7 @@ export default function ActiveSessionScreen({ navigation }: Props) {
   const [weightInput, setWeightInput] = useState('');
   const [repsInput, setRepsInput] = useState('');
 
-  // Add exercise picker
   const [pickerVisible, setPickerVisible] = useState(false);
-  const [pickerExercises, setPickerExercises] = useState<Exercise[]>([]);
-  const [pickerQuery, setPickerQuery] = useState('');
 
   useFocusEffect(
     useCallback(() => {
@@ -150,17 +148,6 @@ export default function ActiveSessionScreen({ navigation }: Props) {
         },
       },
     ]);
-  }
-
-  async function openPicker() {
-    setPickerQuery('');
-    setPickerExercises(await getAllExercises());
-    setPickerVisible(true);
-  }
-
-  async function handlePickerSearch(text: string) {
-    setPickerQuery(text);
-    setPickerExercises(text.trim() ? await searchExercises(text.trim()) : await getAllExercises());
   }
 
   async function handlePickExercise(exercise: Exercise) {
@@ -290,7 +277,7 @@ export default function ActiveSessionScreen({ navigation }: Props) {
         }
         ListFooterComponent={
           <View style={styles.footer}>
-            <TouchableOpacity style={styles.addBtn} onPress={openPicker}>
+            <TouchableOpacity style={styles.addBtn} onPress={() => setPickerVisible(true)}>
               <Text style={styles.addBtnText}>+ Add Exercise</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.endBtn} onPress={handleEndWorkout}>
@@ -355,37 +342,12 @@ export default function ActiveSessionScreen({ navigation }: Props) {
         </KeyboardAvoidingView>
       </Modal>
 
-      <Modal visible={pickerVisible} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.pickerCard}>
-            <View style={styles.pickerHeader}>
-              <Text style={styles.modalTitle}>Add Exercise</Text>
-              <TouchableOpacity onPress={() => setPickerVisible(false)}>
-                <Text style={styles.pickerClose}>Done</Text>
-              </TouchableOpacity>
-            </View>
-            <TextInput
-              style={styles.textInput}
-              placeholder="Search exercises"
-              placeholderTextColor="#999"
-              value={pickerQuery}
-              onChangeText={handlePickerSearch}
-            />
-            <FlatList
-              data={pickerExercises}
-              keyExtractor={(item) => item.id}
-              style={styles.pickerList}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
-              renderItem={({ item }) => (
-                <TouchableOpacity style={styles.pickerRow} onPress={() => handlePickExercise(item)}>
-                  <Text style={styles.pickerName}>{item.name}</Text>
-                  <Text style={styles.pickerMeta}>{item.recommendedMaxReps} reps</Text>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        </View>
-      </Modal>
+      <ExercisePicker
+        visible={pickerVisible}
+        onClose={() => setPickerVisible(false)}
+        onSelect={handlePickExercise}
+        disabledIds={sessionExercises.map((e) => e.exerciseId)}
+      />
     </View>
   );
 }
@@ -616,41 +578,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#fff',
     fontWeight: '600',
-  },
-  pickerCard: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 24,
-    paddingBottom: 40,
-    maxHeight: '80%',
-  },
-  pickerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  pickerClose: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  pickerList: {
-    marginTop: 12,
-  },
-  pickerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-  },
-  pickerName: {
-    flex: 1,
-    fontSize: 16,
-    color: '#333',
-  },
-  pickerMeta: {
-    fontSize: 13,
-    color: '#999',
   },
 });
