@@ -244,6 +244,23 @@ Minimum coverage, written test-first:
 | Snapshot change surprises in-flight sessions | Migration seeds `session_exercises` for any currently-active session from its template |
 | Scope is large for one branch | Steps 1–4 are the foundation and ship a working app on their own; 5–9 are independently reviewable |
 
+## Status
+
+All steps implemented. Deviations worth recording:
+
+- **Step 0** used expo-sqlite's `backupDatabaseAsync` rather than a file copy — consistent snapshot with
+  the connection open, no torn-WAL risk.
+- **Step 1** used `node:sqlite` rather than `better-sqlite3`, avoiding a node-gyp toolchain on Windows.
+  The harness enforces foreign keys where production does not, which caught the deferred-constraint
+  counter bug in the table rebuild.
+- **Step 5** extracted two components rather than one. With all three callers written they did not want
+  the same thing: `ExercisePicker` is shared by all three, `ExerciseListEditor` only by the two template
+  editors. The active session's rows carry logged sets and a Log Set action, and its items are session
+  exercises, not library ones.
+
+**Not verified on a device.** 68 tests and `tsc --noEmit` pass, but nothing here has run on hardware —
+including the migration, which has never touched a real database, and backup/restore from step 0.
+
 ## Suggested sequencing
 
 Step 0 ships **on its own, first** — backup/restore published via `eas update` and confirmed working
