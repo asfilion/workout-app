@@ -16,53 +16,48 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { WorkoutsStackParamList } from '../../navigation/WorkoutsStack';
 import { useSessionStore } from '../../stores/sessionStore';
 import { useSettingsStore } from '../../stores/settingsStore';
-import { getDaysForTemplate } from '../../db/workouts';
 import { getExerciseById } from '../../db/exercises';
 import { getLastSetForExercise as dbGetLastSet } from '../../db/sessions';
 import { convertWeight, convertToLb, formatWeight } from '../../utils/units';
-import { Exercise, SessionSetEntry } from '../../types';
+import { Exercise, SessionExercise, SessionSetEntry } from '../../types';
 import TimerDisplay from '../../components/TimerDisplay';
+import ExercisePicker from '../../components/ExercisePicker';
 
 type Props = NativeStackScreenProps<WorkoutsStackParamList, 'ActiveSession'>;
 
-interface ExerciseWithLastSet {
-  exercise: Exercise;
-  lastSetInSession: SessionSetEntry | undefined;
+interface ExerciseRow {
+  entry: SessionExercise;
+  /** From the exercise record, which may have been archived since. */
+  recommendedMaxReps: number | null;
+  setsThisSession: SessionSetEntry[];
 }
 
 export default function ActiveSessionScreen({ navigation }: Props) {
-  const { activeSession, sets, lastSetLoggedAt, logSet, endSession, loadActiveSession } =
-    useSessionStore();
+  const {
+    activeSession,
+    sessionExercises,
+    sets,
+    lastSetLoggedAt,
+    logSet,
+    updateSet,
+    deleteSet,
+    addExercise,
+    removeExercise,
+    endSession,
+    loadActiveSession,
+  } = useSessionStore();
   const { unit } = useSettingsStore();
 
-  const [exerciseRows, setExerciseRows] = useState<ExerciseWithLastSet[]>([]);
+  const [rows, setRows] = useState<ExerciseRow[]>([]);
 
-  // Log Set Modal state
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
+  // Log / edit set modal
+  const [setModalVisible, setSetModalVisible] = useState(false);
+  const [modalTarget, setModalTarget] = useState<SessionExercise | null>(null);
+  const [editingSet, setEditingSet] = useState<SessionSetEntry | null>(null);
   const [weightInput, setWeightInput] = useState('');
   const [repsInput, setRepsInput] = useState('');
 
-  async function loadExercises() {
-    if (!activeSession) return;
-    const days = await getDaysForTemplate(activeSession.workoutTemplateId);
-    const day = days.find((d) => d.dayOfWeek === activeSession.dayOfWeek);
-    if (!day || day.orderedExerciseIds.length === 0) {
-      setExerciseRows([]);
-      return;
-    }
-    const exercises = await Promise.all(
-      day.orderedExerciseIds.map((id) => getExerciseById(id))
-    );
-    const validExercises = exercises.filter((e): e is Exercise => e !== null);
-    const rows: ExerciseWithLastSet[] = validExercises.map((exercise) => {
-      const lastSet = [...sets]
-        .reverse()
-        .find((s) => s.exerciseId === exercise.id);
-      return { exercise, lastSetInSession: lastSet };
-    });
-    setExerciseRows(rows);
-  }
+  const [pickerVisible, setPickerVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -70,27 +65,57 @@ export default function ActiveSessionScreen({ navigation }: Props) {
     }, [])
   );
 
+  // The list comes from the session, not the template, so a session with no
+  // template or no weekday works the same as any other.
   useEffect(() => {
-    loadExercises();
-  }, [activeSession, sets]);
-
-  async function openLogSetModal(exercise: Exercise) {
-    setSelectedExercise(exercise);
-    // Prefill weight from last set for this exercise (globally, not just this session)
-    const lastSet = await dbGetLastSet(exercise.id);
-    if (lastSet) {
-      const displayWeight = convertWeight(lastSet.weight, unit);
-      setWeightInput(String(displayWeight));
-      setRepsInput(String(lastSet.reps));
-    } else {
-      setWeightInput('');
-      setRepsInput('');
+    let canceled = false;
+    async function build() {
+      const built = await Promise.all(
+        sessionExercises.map(async (entry) => {
+          const exercise = await getExerciseById(entry.exerciseId);
+          return {
+            entry,
+            recommendedMaxReps: exercise?.recommendedMaxReps ?? null,
+            setsThisSession: sets.filter((s) => s.exerciseId === entry.exerciseId),
+          };
+        })
+      );
+      if (!canceled) setRows(built);
     }
-    setModalVisible(true);
+    build();
+    return () => {
+      canceled = true;
+    };
+  }, [sessionExercises, sets]);
+
+  async function openLogSetModal(entry: SessionExercise) {
+    setModalTarget(entry);
+    setEditingSet(null);
+    // Prefill from the last set for this exercise anywhere, not just this session.
+    const lastSet = await dbGetLastSet(entry.exerciseId);
+    setWeightInput(lastSet ? String(convertWeight(lastSet.weight, unit)) : '');
+    setRepsInput(lastSet ? String(lastSet.reps) : '');
+    setSetModalVisible(true);
   }
 
-  async function handleLogSet() {
-    if (!selectedExercise || !activeSession) return;
+  function openEditSetModal(entry: SessionExercise, target: SessionSetEntry) {
+    setModalTarget(entry);
+    setEditingSet(target);
+    setWeightInput(String(convertWeight(target.weight, unit)));
+    setRepsInput(String(target.reps));
+    setSetModalVisible(true);
+  }
+
+  function closeSetModal() {
+    setSetModalVisible(false);
+    setModalTarget(null);
+    setEditingSet(null);
+    setWeightInput('');
+    setRepsInput('');
+  }
+
+  async function handleSaveSet() {
+    if (!modalTarget || !activeSession) return;
     const weightVal = parseFloat(weightInput);
     const repsVal = parseInt(repsInput, 10);
     if (isNaN(weightVal) || weightVal <= 0) {
@@ -102,11 +127,53 @@ export default function ActiveSessionScreen({ navigation }: Props) {
       return;
     }
     const weightInLb = convertToLb(weightVal, unit);
-    await logSet(selectedExercise.id, selectedExercise.name, weightInLb, repsVal);
-    setModalVisible(false);
-    setSelectedExercise(null);
-    setWeightInput('');
-    setRepsInput('');
+    if (editingSet) {
+      await updateSet(editingSet.id, weightInLb, repsVal);
+    } else {
+      await logSet(modalTarget.exerciseId, modalTarget.exerciseNameSnapshot, weightInLb, repsVal);
+    }
+    closeSetModal();
+  }
+
+  function handleDeleteSet() {
+    if (!editingSet) return;
+    Alert.alert('Delete Set', 'Remove this set from the workout?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          await deleteSet(editingSet.id);
+          closeSetModal();
+        },
+      },
+    ]);
+  }
+
+  async function handlePickExercise(exercise: Exercise) {
+    await addExercise(exercise.id, exercise.name);
+    setPickerVisible(false);
+  }
+
+  function handleRemoveExercise(row: ExerciseRow) {
+    const loggedNote =
+      row.setsThisSession.length > 0
+        ? ` The ${row.setsThisSession.length} set${
+            row.setsThisSession.length === 1 ? '' : 's'
+          } you already logged will be kept.`
+        : '';
+    Alert.alert(
+      'Remove Exercise',
+      `Remove ${row.entry.exerciseNameSnapshot} from this workout?${loggedNote}`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => removeExercise(row.entry.id),
+        },
+      ]
+    );
   }
 
   function handleEndWorkout() {
@@ -123,21 +190,17 @@ export default function ActiveSessionScreen({ navigation }: Props) {
   }
 
   function handleCancelWorkout() {
-    Alert.alert(
-      'Cancel Workout',
-      'Are you sure you want to cancel this workout?',
-      [
-        { text: 'Keep Going', style: 'cancel' },
-        {
-          text: 'Cancel Workout',
-          style: 'destructive',
-          onPress: async () => {
-            await endSession('canceled');
-            navigation.goBack();
-          },
+    Alert.alert('Cancel Workout', 'Are you sure you want to cancel this workout?', [
+      { text: 'Keep Going', style: 'cancel' },
+      {
+        text: 'Cancel Workout',
+        style: 'destructive',
+        onPress: async () => {
+          await endSession('canceled');
+          navigation.goBack();
         },
-      ]
-    );
+      },
+    ]);
   }
 
   if (!activeSession) {
@@ -150,25 +213,38 @@ export default function ActiveSessionScreen({ navigation }: Props) {
     );
   }
 
-  function renderExerciseRow({ item }: { item: ExerciseWithLastSet }) {
-    const { exercise, lastSetInSession } = item;
+  function renderExerciseRow({ item }: { item: ExerciseRow }) {
     return (
       <View style={styles.exerciseRow}>
         <View style={styles.exerciseTopRow}>
-          <Text style={styles.exerciseName}>{exercise.name}</Text>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{exercise.recommendedMaxReps} reps</Text>
-          </View>
+          <Text style={styles.exerciseName}>{item.entry.exerciseNameSnapshot}</Text>
+          {item.recommendedMaxReps !== null && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{item.recommendedMaxReps} reps</Text>
+            </View>
+          )}
+          <TouchableOpacity onPress={() => handleRemoveExercise(item)} hitSlop={8}>
+            <Text style={styles.removeExercise}>✕</Text>
+          </TouchableOpacity>
         </View>
-        {lastSetInSession && (
-          <Text style={styles.lastSetText}>
-            Last: {formatWeight(lastSetInSession.weight, unit)} × {lastSetInSession.reps} reps
-          </Text>
+
+        {item.setsThisSession.length > 0 && (
+          <View style={styles.setList}>
+            {item.setsThisSession.map((s, index) => (
+              <TouchableOpacity
+                key={s.id}
+                style={styles.setChip}
+                onPress={() => openEditSetModal(item.entry, s)}
+              >
+                <Text style={styles.setChipText}>
+                  {index + 1}. {formatWeight(s.weight, unit)} × {s.reps}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         )}
-        <TouchableOpacity
-          style={styles.logSetBtn}
-          onPress={() => openLogSetModal(exercise)}
-        >
+
+        <TouchableOpacity style={styles.logSetBtn} onPress={() => openLogSetModal(item.entry)}>
           <Text style={styles.logSetBtnText}>Log Set</Text>
         </TouchableOpacity>
       </View>
@@ -177,31 +253,33 @@ export default function ActiveSessionScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      {/* Sticky timer header */}
       <View style={styles.timerHeader}>
         <TimerDisplay label="Total Time" startTimestamp={activeSession.startedAt} />
         <View style={styles.timerDivider} />
         <TimerDisplay label="Since Last Set" startTimestamp={lastSetLoggedAt} />
       </View>
 
-      {/* Session info */}
       <View style={styles.sessionInfo}>
         <Text style={styles.sessionName}>{activeSession.workoutNameSnapshot}</Text>
-        <Text style={styles.sessionDay}>{activeSession.dayOfWeek}</Text>
+        {activeSession.dayOfWeek && <Text style={styles.sessionDay}>{activeSession.dayOfWeek}</Text>}
       </View>
 
       <FlatList
-        data={exerciseRows}
-        keyExtractor={(item) => item.exercise.id}
+        data={rows}
+        keyExtractor={(item) => item.entry.id}
         renderItem={renderExerciseRow}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No exercises scheduled for this day.</Text>
+            <Text style={styles.emptyText}>No exercises yet.</Text>
+            <Text style={styles.emptySubtext}>Tap Add Exercise to build your workout.</Text>
           </View>
         }
         ListFooterComponent={
           <View style={styles.footer}>
+            <TouchableOpacity style={styles.addBtn} onPress={() => setPickerVisible(true)}>
+              <Text style={styles.addBtnText}>+ Add Exercise</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={styles.endBtn} onPress={handleEndWorkout}>
               <Text style={styles.endBtnText}>End Workout</Text>
             </TouchableOpacity>
@@ -212,15 +290,14 @@ export default function ActiveSessionScreen({ navigation }: Props) {
         }
       />
 
-      {/* Log Set Modal */}
-      <Modal visible={modalVisible} transparent animationType="slide">
+      <Modal visible={setModalVisible} transparent animationType="slide">
         <KeyboardAvoidingView
           style={styles.modalOverlay}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>
-              {selectedExercise?.name ?? 'Log Set'}
+              {editingSet ? 'Edit Set' : (modalTarget?.exerciseNameSnapshot ?? 'Log Set')}
             </Text>
 
             <Text style={styles.inputLabel}>Weight ({unit})</Text>
@@ -244,28 +321,33 @@ export default function ActiveSessionScreen({ navigation }: Props) {
               keyboardType="number-pad"
             />
 
+            {editingSet && (
+              <TouchableOpacity style={styles.deleteSetBtn} onPress={handleDeleteSet}>
+                <Text style={styles.deleteSetBtnText}>Delete Set</Text>
+              </TouchableOpacity>
+            )}
+
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalBtn, styles.modalCancelBtn]}
-                onPress={() => {
-                  setModalVisible(false);
-                  setSelectedExercise(null);
-                  setWeightInput('');
-                  setRepsInput('');
-                }}
+                onPress={closeSetModal}
               >
                 <Text style={styles.modalCancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalBtn, styles.modalSaveBtn]}
-                onPress={handleLogSet}
-              >
+              <TouchableOpacity style={[styles.modalBtn, styles.modalSaveBtn]} onPress={handleSaveSet}>
                 <Text style={styles.modalSaveBtnText}>Save</Text>
               </TouchableOpacity>
             </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <ExercisePicker
+        visible={pickerVisible}
+        onClose={() => setPickerVisible(false)}
+        onSelect={handlePickExercise}
+        disabledIds={sessionExercises.map((e) => e.exerciseId)}
+      />
     </View>
   );
 }
@@ -334,10 +416,27 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontWeight: '600',
   },
-  lastSetText: {
-    fontSize: 13,
-    color: '#666',
+  removeExercise: {
+    fontSize: 16,
+    color: '#c7c7cc',
+    paddingHorizontal: 4,
+  },
+  setList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     marginBottom: 10,
+    marginTop: 4,
+  },
+  setChip: {
+    backgroundColor: '#f2f2f7',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  setChipText: {
+    fontSize: 13,
+    color: '#333',
   },
   logSetBtn: {
     backgroundColor: '#007AFF',
@@ -362,9 +461,26 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#999',
   },
+  emptySubtext: {
+    fontSize: 13,
+    color: '#bbb',
+    marginTop: 4,
+  },
   footer: {
     padding: 16,
     gap: 12,
+  },
+  addBtn: {
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  addBtnText: {
+    color: '#007AFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   endBtn: {
     backgroundColor: '#34C759',
@@ -422,6 +538,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     backgroundColor: '#fafafa',
+  },
+  deleteSetBtn: {
+    marginTop: 20,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FF3B30',
+    borderRadius: 8,
+  },
+  deleteSetBtnText: {
+    color: '#FF3B30',
+    fontSize: 15,
+    fontWeight: '600',
   },
   modalButtons: {
     flexDirection: 'row',

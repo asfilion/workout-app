@@ -9,7 +9,7 @@ export async function exportSetsCsv(unit: WeightUnit): Promise<void> {
   const header = 'sessionId,sessionStatus,workoutName,dayOfWeek,sessionStartedAt,sessionEndedAt,setLoggedAt,exerciseId,exerciseName,weight,reps';
   const csvRows = rows.map(r => {
     const w = convertWeight(r.weight, unit);
-    return [r.sessionId, r.sessionStatus, `"${r.workoutName}"`, r.dayOfWeek,
+    return [r.sessionId, r.sessionStatus, `"${r.workoutName}"`, r.dayOfWeek ?? '',
       r.sessionStartedAt, r.sessionEndedAt ?? '', r.setLoggedAt,
       r.exerciseId, `"${r.exerciseName}"`, w, r.reps].join(',');
   });
