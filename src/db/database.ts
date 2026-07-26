@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import * as Crypto from 'expo-crypto';
-import { createTables } from './schema';
+import { runMigrations } from './migrations';
 import { createBackup, BACKUP_DB_NAME } from './backup';
 import seedExercises from './seed-exercises.json';
 import { type SeedExercise } from '../types';
@@ -43,7 +43,7 @@ async function openAndPrepare(): Promise<SQLite.SQLiteDatabase> {
 }
 
 async function prepare(connection: SQLite.SQLiteDatabase): Promise<void> {
-  await createTables(connection);
+  await runMigrations(connection);
   await seedIfEmpty(connection);
 }
 
