@@ -16,6 +16,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { WorkoutsStackParamList } from '../../navigation/WorkoutsStack';
 import { getAllWorkoutTemplates, createWorkoutTemplate, getWorkoutDaysForToday } from '../../db/workouts';
+import { getExerciseById } from '../../db/exercises';
+import { SessionExerciseInput } from '../../db/sessions';
 import { useSessionStore } from '../../stores/sessionStore';
 import { getCurrentDayOfWeek } from '../../utils/time';
 import { WorkoutTemplate, WorkoutDayTemplate } from '../../types';
@@ -94,7 +96,14 @@ export default function WorkoutListScreen({ navigation }: Props) {
     }
 
     const today = getCurrentDayOfWeek();
-    await startSession(entry.workoutTemplateId, entry.workoutName, today);
+    // The session takes its own copy of the day's exercises. Archived or deleted
+    // ones are dropped rather than carried across as broken rows.
+    const resolved = await Promise.all(entry.orderedExerciseIds.map((id) => getExerciseById(id)));
+    const exercises: SessionExerciseInput[] = resolved
+      .filter((e): e is NonNullable<typeof e> => e !== null)
+      .map((e) => ({ exerciseId: e.id, exerciseNameSnapshot: e.name }));
+
+    await startSession(entry.workoutTemplateId, entry.workoutName, today, exercises);
     const updatedSession = useSessionStore.getState().activeSession;
     if (updatedSession) {
       navigation.navigate('ActiveSession', { sessionId: updatedSession.id });

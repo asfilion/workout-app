@@ -128,7 +128,12 @@ export default function WorkoutDayDetailScreen({ route, navigation }: Props) {
       );
       return;
     }
-    await startSession(templateId, templateName, day);
+    await startSession(
+      templateId,
+      templateName,
+      day,
+      orderedExercises.map((e) => ({ exerciseId: e.id, exerciseNameSnapshot: e.name }))
+    );
     const updatedSession = useSessionStore.getState().activeSession;
     if (updatedSession) {
       navigation.navigate('ActiveSession', { sessionId: updatedSession.id });
