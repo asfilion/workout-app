@@ -12,10 +12,25 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.workouttracker.app"
+      "bundleIdentifier": "com.workouttracker.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "plugins": [
       "expo-sqlite"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "b2371233-a956-4fac-b9f4-45210e8e0a85"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/b2371233-a956-4fac-b9f4-45210e8e0a85"
+    },
+    "android": {}
   }
 }
