@@ -16,6 +16,6 @@ module.exports = {
     '^expo-crypto$': '<rootDir>/src/db/__tests__/helpers/expoNativeStub.ts',
   },
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', { tsconfig: { module: 'commonjs', esModuleInterop: true } }],
+    '^.+\\.tsx?$': ['ts-jest', { tsconfig: { module: 'commonjs', esModuleInterop: true, types: ['jest', 'node'] } }],
   },
 };
