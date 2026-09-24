@@ -7,14 +7,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 npm install              # Install dependencies
 npx expo start           # Start Metro dev server (scan QR with Expo Go)
-npx tsc --noEmit         # Type-check (no linter or test framework configured)
+npx tsc --noEmit         # Type-check
+npm test                 # Jest (DB layer, runs in Node via node:sqlite)
 ```
 
 Standalone iOS builds use EAS Build: `eas build --platform ios --profile production`
 
 ## Architecture
 
-Offline-first iOS weightlifting tracker. React Native + Expo (SDK 54), TypeScript, expo-sqlite, Zustand, React Navigation.
+Offline-first iOS weightlifting tracker. React Native + Expo (SDK 57), TypeScript, expo-sqlite, Zustand, React Navigation.
 
 **Data flow:** SQLite → query modules (`src/db/*.ts`) → Zustand stores / direct screen calls → React components
 
