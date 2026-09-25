@@ -32,6 +32,7 @@ Offline-first iOS weightlifting tracker. React Native + Expo (SDK 57), TypeScrip
 - **Only one active session at a time.** Enforced by querying `WHERE status = 'active' LIMIT 1`.
 - **Canceled sessions preserve sets** — status changes to `'canceled'`, nothing is deleted.
 - **Exercises with history are archived, not deleted.** Check `exerciseHasHistory()` before deciding.
+- **Keep the top-right corner clear.** The app only runs in Expo Go, whose floating dev-menu button (SDK 57+) covers it. Put header actions in `headerLeft` (with `headerBackVisible: true` on pushed screens) and modal close buttons on the left.
 - **`expo-file-system/legacy`** — use the legacy subpath, not `expo-file-system` directly (v2 moved the classic API).
 
 ## Navigation
