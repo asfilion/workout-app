@@ -17,7 +17,7 @@ An offline-first weightlifting tracker for iPhone. Create repeating weekly worko
 
 | Layer | Technology |
 |-------|------------|
-| Framework | React Native + Expo (SDK 54, managed workflow) |
+| Framework | React Native + Expo (SDK 57, managed workflow) |
 | Language | TypeScript |
 | Storage | expo-sqlite |
 | State | Zustand |
@@ -29,8 +29,8 @@ An offline-first weightlifting tracker for iPhone. Create repeating weekly worko
 
 ### Prerequisites
 
-- **Node.js 18+** and npm
-- **Expo Go** app on your iPhone (free, from the App Store)
+- **Node.js 20.19.4+** and npm
+- **Expo Go** app on your iPhone (free, from the App Store) -- must support SDK 57
 
 ### Run Locally
 
@@ -65,7 +65,7 @@ eas update:configure
 ### Publish an Update
 
 ```bash
-eas update --branch main --message "Initial release"
+eas update --branch main --environment production --message "Initial release"
 ```
 
 This uploads your JS bundle to Expo's CDN.
@@ -93,7 +93,7 @@ This uploads your JS bundle to Expo's CDN.
 After making code changes:
 
 ```bash
-eas update --branch main --message "description of changes"
+eas update --branch main --environment production --message "description of changes"
 ```
 
 Next time you open the app in Expo Go, it picks up the new version automatically.

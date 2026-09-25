@@ -7,14 +7,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 npm install              # Install dependencies
 npx expo start           # Start Metro dev server (scan QR with Expo Go)
-npx tsc --noEmit         # Type-check (no linter or test framework configured)
+npx tsc --noEmit         # Type-check
+npm test                 # Jest (DB layer, runs in Node via node:sqlite)
 ```
 
 Standalone iOS builds use EAS Build: `eas build --platform ios --profile production`
 
 ## Architecture
 
-Offline-first iOS weightlifting tracker. React Native + Expo (SDK 54), TypeScript, expo-sqlite, Zustand, React Navigation.
+Offline-first iOS weightlifting tracker. React Native + Expo (SDK 57), TypeScript, expo-sqlite, Zustand, React Navigation.
 
 **Data flow:** SQLite → query modules (`src/db/*.ts`) → Zustand stores / direct screen calls → React components
 
@@ -31,6 +32,7 @@ Offline-first iOS weightlifting tracker. React Native + Expo (SDK 54), TypeScrip
 - **Only one active session at a time.** Enforced by querying `WHERE status = 'active' LIMIT 1`.
 - **Canceled sessions preserve sets** — status changes to `'canceled'`, nothing is deleted.
 - **Exercises with history are archived, not deleted.** Check `exerciseHasHistory()` before deciding.
+- **Keep the top-right corner clear.** The app only runs in Expo Go, whose floating dev-menu button (SDK 57+) covers it. Put header actions in `headerLeft` (with `headerBackVisible: true` on pushed screens) and modal close buttons on the left.
 - **`expo-file-system/legacy`** — use the legacy subpath, not `expo-file-system` directly (v2 moved the classic API).
 
 ## Navigation
