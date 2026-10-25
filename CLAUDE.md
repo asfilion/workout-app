@@ -15,7 +15,7 @@ Standalone iOS builds use EAS Build: `eas build --platform ios --profile product
 
 ## Architecture
 
-Offline-first iOS weightlifting tracker. React Native + Expo (SDK 57), TypeScript, expo-sqlite, Zustand, React Navigation.
+Offline-first iOS weightlifting tracker. React Native + Expo (SDK 58), TypeScript, expo-sqlite, Zustand, React Navigation.
 
 **Data flow:** SQLite → query modules (`src/db/*.ts`) → Zustand stores / direct screen calls → React components
 

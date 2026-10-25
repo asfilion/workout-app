@@ -17,7 +17,7 @@ An offline-first weightlifting tracker for iPhone. Create repeating weekly worko
 
 | Layer | Technology |
 |-------|------------|
-| Framework | React Native + Expo (SDK 57, managed workflow) |
+| Framework | React Native + Expo (SDK 58, managed workflow) |
 | Language | TypeScript |
 | Storage | expo-sqlite |
 | State | Zustand |
@@ -29,8 +29,8 @@ An offline-first weightlifting tracker for iPhone. Create repeating weekly worko
 
 ### Prerequisites
 
-- **Node.js 20.19.4+** and npm
-- **Expo Go** app on your iPhone (free, from the App Store) -- must support SDK 57
+- **Node.js 22.13+ or 24.3+** and npm
+- **Expo Go** app on your iPhone (free, from the App Store) -- must support SDK 58
 
 ### Run Locally
 
