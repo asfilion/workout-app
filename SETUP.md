@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Node.js 18+ and npm
+- Node.js 20.19.4+ and npm
 - Expo CLI: `npm install -g expo-cli` (or use `npx expo`)
 - For iOS builds: Expo account (free) at https://expo.dev
 

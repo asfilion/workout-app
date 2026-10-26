@@ -77,10 +77,11 @@ export default function ExercisePicker({
     <Modal visible={visible} animationType="slide">
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>{title}</Text>
+          {/* Done sits on the left: Expo Go's floating dev-menu button covers the top right. */}
           <TouchableOpacity onPress={onClose}>
             <Text style={styles.close}>Done</Text>
           </TouchableOpacity>
+          <Text style={styles.title}>{title}</Text>
         </View>
         <KeyboardAvoidingView
           style={styles.flex}
@@ -122,7 +123,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 16,
     paddingHorizontal: 16,
     paddingBottom: 12,
   },

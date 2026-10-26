@@ -4,7 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { WorkoutsStack } from './WorkoutsStack';
 import { ExercisesStack } from './ExercisesStack';
 import SettingsScreen from '../screens/settings/SettingsScreen';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
 
 const Tab = createBottomTabNavigator();
 

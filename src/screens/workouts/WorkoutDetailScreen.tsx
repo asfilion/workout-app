@@ -99,7 +99,8 @@ export default function WorkoutDetailScreen({ route, navigation }: Props) {
   useLayoutEffect(() => {
     navigation.setOptions({
       title: templateName,
-      headerRight: () => (
+      headerBackVisible: true,
+      headerLeft: () => (
         <TouchableOpacity onPress={openMenu}>
           <Text style={styles.headerButton}>Edit</Text>
         </TouchableOpacity>
@@ -308,7 +309,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#007AFF',
     fontWeight: '600',
-    marginRight: 4,
+    marginLeft: 8,
   },
   modalOverlay: {
     flex: 1,

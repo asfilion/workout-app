@@ -64,7 +64,7 @@ export default function WorkoutListScreen({ navigation }: Props) {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerRight: () => (
+      headerLeft: () => (
         <TouchableOpacity onPress={() => setModalVisible(true)}>
           <Text style={styles.headerButton}>+</Text>
         </TouchableOpacity>
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: '#007AFF',
     fontWeight: '400',
-    marginRight: 4,
+    marginLeft: 4,
   },
   modalOverlay: {
     flex: 1,
